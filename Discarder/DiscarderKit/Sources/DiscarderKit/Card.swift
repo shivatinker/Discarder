@@ -5,14 +5,38 @@
 //  Created by Andrii Zinoviev on 07.06.2025.
 //
 
-public enum Suit: String, Sendable, Hashable, CustomStringConvertible, CaseIterable {
-    case spades = "S"
-    case hearts = "H"
-    case diamonds = "D"
-    case clubs = "C"
+public enum Suit: Sendable, Hashable, CustomStringConvertible, CaseIterable, Comparable {
+    case spades
+    case hearts
+    case diamonds
+    case clubs
+    
+    init?(string: String) {
+        switch string {
+        case "S":
+            self = .spades
+        case "H":
+            self = .hearts
+        case "D":
+            self = .diamonds
+        case "C":
+            self = .clubs
+        default:
+            return nil
+        }
+    }
     
     public var description: String {
-        self.rawValue
+        switch self {
+        case .spades:
+            "S"
+        case .hearts:
+            "H"
+        case .diamonds:
+            "D"
+        case .clubs:
+            "C"
+        }
     }
 }
 
@@ -53,7 +77,7 @@ public struct Rank: Sendable, Hashable, CustomStringConvertible, Comparable, Exp
     public static let ace = Rank(index: 14)
     
     public static var allCases: [Rank] {
-        (2..<14).map(Rank.init(index:))
+        (2...14).map(Rank.init(index:))
     }
     
     public init?(string: String) {
@@ -73,12 +97,20 @@ public struct Rank: Sendable, Hashable, CustomStringConvertible, Comparable, Exp
     }
 }
 
-public struct Card: Hashable, CustomStringConvertible {
+public struct Card: Hashable, CustomStringConvertible, Sendable, Comparable {
     public let rank: Rank
     public let suit: Suit
     
     public var description: String {
         "\(self.rank)\(self.suit)"
+    }
+    
+    public static func < (lhs: Card, rhs: Card) -> Bool {
+        if lhs.suit == rhs.suit {
+            return lhs.rank < rhs.rank
+        }
+        
+        return lhs.suit < rhs.suit
     }
 }
 
@@ -97,7 +129,7 @@ extension Card {
             return nil
         }
         
-        guard let suit = Suit(rawValue: suitString) else {
+        guard let suit = Suit(string: suitString) else {
             return nil
         }
         
@@ -108,5 +140,11 @@ extension Card {
         string.split(separator: " ").map { value in
             Card(string: value)!
         }
+    }
+}
+
+extension Card: ExpressibleByStringLiteral {
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(string: value)!
     }
 }

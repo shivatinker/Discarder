@@ -11,7 +11,9 @@ import SwiftUI
 struct DiscarderApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(
+                model: MainViewModel()
+            )
         }
     }
 }

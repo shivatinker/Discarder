@@ -25,10 +25,10 @@ public protocol MCSimulatorDelegate<Output>: AnyObject {
     func handleUpdate(_ output: Output, iteration: Int)
 }
 
-public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
+public actor MCSimulator<Algorithm: MonteCarloAlgorithm> {
     private var random: RandomNumberGenerator
     
-    public weak var delegate: (any MCSimulatorDelegate<Algorithm.Output>)?
+    private weak var delegate: (any MCSimulatorDelegate<Algorithm.Output>)?
     
     private let algorithm: Algorithm
     private var iterations: Int = 0
@@ -44,6 +44,10 @@ public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
         self.output = Algorithm.initialOutput
     }
     
+    public func setDelegate(_ delegate: some MCSimulatorDelegate<Algorithm.Output>) {
+        self.delegate = delegate
+    }
+    
     public func iterate(count: Int) async throws {
         for _ in 0..<count {
             try Task.checkCancellation()
@@ -57,7 +61,7 @@ public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
             output: &self.output,
             iterations: self.iterations + 1
         )
-        
+            
         self.iterationCompeted()
     }
     

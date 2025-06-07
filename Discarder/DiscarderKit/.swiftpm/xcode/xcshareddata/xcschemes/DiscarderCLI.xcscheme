@@ -52,11 +52,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "&quot;2S 4S 6H 8C JH QD 7C AS&quot;"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "&quot;2S 4S 6H 8C JH&quot;"
+            argument = "&quot;AS 2D&quot;"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

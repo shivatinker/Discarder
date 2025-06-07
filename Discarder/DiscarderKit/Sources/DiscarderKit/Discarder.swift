@@ -8,15 +8,27 @@
 import Algorithms
 import Foundation
 
-struct Deck {
-    var cards = Multiset<Card>()
+public struct Deck: ExpressibleByArrayLiteral, Sendable {
+    public var cards: [Card] = []
     
-    static func makeStandard() -> Deck {
+    public init(_ cards: [Card]) {
+        self.cards = cards
+    }
+    
+    public init(arrayLiteral elements: Card...) {
+        self.init(elements)
+    }
+    
+    public static func makeStandard(without cards: Set<Card> = []) -> Deck {
         var deck = Deck()
         
         for suit in Suit.allCases {
             for rank in Rank.allCases {
-                deck.cards.insert(Card(rank: rank, suit: suit))
+                let card = Card(rank: rank, suit: suit)
+                
+                if false == cards.contains(card) {
+                    deck.cards.append(card)
+                }
             }
         }
         
@@ -28,8 +40,13 @@ public struct DiscarderResult: Sendable, CustomStringConvertible {
     public var iterations: Int = 0
     public var outs: [PokerHandKind: Int] = [:]
     
+    public init() {}
+    
     public var description: String {
-        self.outs.sorted(by: { $0.value > $1.value }).map(self.row(for:)).joined(separator: "\n")
+        """
+        Iteration \(self.iterations)
+        \(self.outs.sorted(by: { $0.value > $1.value }).map(self.row(for:)).joined(separator: "\n"))
+        """
     }
     
     private func row(for out: (PokerHandKind, Int)) -> String {
@@ -40,7 +57,7 @@ public struct DiscarderResult: Sendable, CustomStringConvertible {
     }
 }
 
-public struct DiscarderAlgorithm: MonteCarloAlgorithm {
+public struct DiscarderAlgorithm: MonteCarloAlgorithm, Sendable {
     public typealias Output = DiscarderResult
     
     public static let initialOutput = DiscarderResult()
@@ -48,19 +65,13 @@ public struct DiscarderAlgorithm: MonteCarloAlgorithm {
     private let resolver = PokerHandResolver()
     
     let deck: Deck
-    let drawSize: Int
-    let hand: Multiset<Card>
+    let drawCount: Int
+    let hand: [Card]
     
-    public init(hand: Multiset<Card>, discards: Multiset<Card>) {
-        self.drawSize = discards.count
-        
-        var deck = Deck.makeStandard()
-        deck.cards.remove(hand)
+    public init(hand: [Card], deck: Deck, drawCount: Int) {
+        self.hand = hand
         self.deck = deck
-        
-        var remainingHand = hand
-        remainingHand.remove(discards)
-        self.hand = remainingHand
+        self.drawCount = drawCount
     }
     
     public func performIteration(
@@ -68,17 +79,15 @@ public struct DiscarderAlgorithm: MonteCarloAlgorithm {
         output: inout DiscarderResult,
         iterations: Int
     ) {
-        let draw = self.deck.cards.allElements.randomSample(
-            count: self.drawSize,
+        let draw = self.deck.cards.randomSample(
+            count: self.drawCount,
             using: &random
         )
         
         var drawnHand = self.hand
-        drawnHand.insert(draw)
+        drawnHand.append(contentsOf: draw)
         
-        let handArray = Array(drawnHand.allElements)
-        
-        for hand in self.resolver.pokerHands(in: handArray) {
+        for hand in self.resolver.pokerHands(in: drawnHand) {
             output.outs[hand, default: 0] += 1
         }
         

@@ -13,14 +13,14 @@ struct DiscarderCLI: AsyncParsableCommand {
     @Argument
     var hand: String
     
-    @Argument
-    var discard: String
-    
     func run() async throws {
-        let hand = try Multiset(Card.makeHand(self.hand))
-        let discard = try Multiset(Card.makeHand(self.discard))
+        let hand = try Card.makeHand(self.hand)
         
-        let algorithm = DiscarderAlgorithm(hand: hand, discards: discard)
+        let algorithm = DiscarderAlgorithm(
+            hand: hand,
+            deck: ["AH", "2D"],
+            drawCount: 1
+        )
         
         let simulator = MCSimulator(
             seed: 42,
