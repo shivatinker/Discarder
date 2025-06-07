@@ -195,7 +195,7 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
                 let remainingHand = self.hand.filter { false == $0.isDiscarded }.map(\.card)
                 
                 let simulator = MCSimulator(
-                    seed: 42,
+                    seed: UInt64.random(in: 0..<UInt64.max),
                     algorithm: DiscarderAlgorithm(
                         hand: remainingHand,
                         deck: self.deck,

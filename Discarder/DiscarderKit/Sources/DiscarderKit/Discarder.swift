@@ -5,7 +5,6 @@
 //  Created by Andrii Zinoviev on 07.06.2025.
 //
 
-import Algorithms
 import Foundation
 
 public struct Deck: ExpressibleByArrayLiteral, Sendable {

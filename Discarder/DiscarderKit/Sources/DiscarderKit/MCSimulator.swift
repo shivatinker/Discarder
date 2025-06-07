@@ -143,12 +143,6 @@ public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
     }
 }
 
-final class TestOperation: Operation {
-    override func main() {
-        print("I'm here!")
-    }
-}
-
 struct SplitMix64: RandomNumberGenerator {
     private var state: UInt64
 
