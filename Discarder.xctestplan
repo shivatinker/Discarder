@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "E8BE6774-0556-4997-87CD-1CCA7D6A6E8B",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Discarder\/DiscarderKit",
+        "identifier" : "DiscarderKitTests",
+        "name" : "DiscarderKitTests"
+      }
+    }
+  ],
+  "version" : 1
+}
