@@ -205,7 +205,7 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
                 
                 simulator.setDelegate(self)
                 
-                try await simulator.run(iterations: 10_000_000)
+                try await simulator.run(iterations: 1_000_000)
             }
             catch {
                 if false == error is CancellationError {
@@ -330,12 +330,12 @@ struct ResultCard: View {
             Spacer()
             
             HStack(spacing: 8) {
-                Text("\(String(format: "%.1f", self.percentage))%")
+                Text("\(String(format: "%.3f", self.percentage))%")
                     .font(.title3)
                     .foregroundStyle(.cyan)
                     .bold()
                     .monospacedDigit()
-                    .frame(width: 70, alignment: .trailing)
+                    .frame(width: 100, alignment: .trailing)
                 
                 Text("\(self.outs)")
                     .font(.subheadline)

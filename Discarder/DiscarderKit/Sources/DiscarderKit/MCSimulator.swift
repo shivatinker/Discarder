@@ -104,7 +104,7 @@ public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
                 algorithm: self.algorithm,
                 seed: UInt64.random(in: 0..<UInt64.max, using: &self.random),
                 iterations: threadIterationCount,
-                batchSize: 10_000
+                batchSize: 30_000
             )
             
             operation.batchHandler = { [weak self] batchOutput in
