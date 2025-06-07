@@ -14,6 +14,8 @@ struct DiscarderApp: App {
             ContentView(
                 model: MainViewModel()
             )
+            .fixedSize()
         }
+        .windowResizability(.contentSize)
     }
 }

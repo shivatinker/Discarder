@@ -55,6 +55,20 @@ public struct DiscarderResult: Sendable, CustomStringConvertible {
         
         return "\(out.0): \(out.1) \(percentageString)"
     }
+    
+    public static var test: Self {
+        var result = DiscarderResult()
+        
+        result.iterations = 10_000
+        result.outs[.royalFlush] = 3
+        result.outs[.straightFlush] = 10
+        result.outs[.fourOfAKind] = 100
+        result.outs[.fullHouse] = 422
+        result.outs[.flush] = 3423
+        result.outs[.straight] = 5432
+        
+        return result
+    }
 }
 
 public struct DiscarderAlgorithm: MonteCarloAlgorithm, Sendable {
