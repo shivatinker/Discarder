@@ -76,8 +76,6 @@ public struct DiscarderAlgorithm: MonteCarloAlgorithm, Sendable {
     
     public static let initialOutput = DiscarderResult()
     
-    private let resolver = PokerHandResolver()
-    
     let deck: Deck
     let drawCount: Int
     let hand: [Card]
@@ -88,23 +86,85 @@ public struct DiscarderAlgorithm: MonteCarloAlgorithm, Sendable {
         self.drawCount = drawCount
     }
     
+    public final class Context {
+        let resolver = PokerHandResolver()
+        var hand: [Card] = []
+        var indices: [Int] = []
+        
+        init(capacity: Int, deckSize: Int) {
+            self.hand.reserveCapacity(capacity)
+            self.indices = Array(0..<deckSize)
+        }
+    }
+    
+    public func makeContext() -> Context {
+        Context(capacity: self.hand.count + self.drawCount, deckSize: self.deck.cards.count)
+    }
+    
     public func performIteration(
+        context: Context,
         random: inout some RandomNumberGenerator,
-        output: inout DiscarderResult,
-        iterations: Int
+        output: inout DiscarderResult
     ) {
-        let draw = self.deck.cards.randomSample(
+        // Pre-allocate a fixed-size array to avoid repeated allocations
+        context.hand.removeAll(keepingCapacity: true)
+        context.hand.append(contentsOf: self.hand)
+        
+        // Sample directly into the drawnHand array to avoid intermediate allocations
+        self.sampleInto(
+            &context.hand,
+            from: self.deck.cards,
             count: self.drawCount,
-            using: &random
+            using: &random,
+            indices: &context.indices
         )
         
-        var drawnHand = self.hand
-        drawnHand.append(contentsOf: draw)
+        // Use optimized hand detection that updates output directly
+        context.resolver.updateOuts(for: context.hand, output: &output)
         
-        for hand in self.resolver.pokerHands(in: drawnHand) {
-            output.outs[hand, default: 0] += 1
+        output.iterations += 1
+    }
+    
+    private func sampleInto<T>(
+        _ target: inout [T],
+        from array: [T],
+        count k: Int,
+        using random: inout some RandomNumberGenerator,
+        indices: inout [Int]
+    ) {
+        let n = array.count
+        guard k > 0, k <= n else { return }
+        
+        // Use Fisher-Yates for all cases - simpler and still very fast
+        self.sampleUsingFisherYates(&target, from: array, count: k, using: &random, indices: &indices)
+    }
+    
+    private func sampleUsingFisherYates<T>(
+        _ target: inout [T],
+        from array: [T],
+        count k: Int,
+        using random: inout some RandomNumberGenerator,
+        indices: inout [Int]
+    ) {
+        let n = array.count
+        
+        // Reset indices to sequential order (reuse the pre-allocated array)
+        for i in 0..<n {
+            indices[i] = i
         }
         
-        output.iterations = iterations
+        for i in 0..<k {
+            let j = Int.random(in: i..<n, using: &random)
+            indices.swapAt(i, j)
+            target.append(array[indices[i]])
+        }
+    }
+    
+    public func combine(output: DiscarderResult, into other: inout DiscarderResult) {
+        other.iterations += output.iterations
+        
+        for (hand, count) in output.outs {
+            other.outs[hand, default: 0] += count
+        }
     }
 }

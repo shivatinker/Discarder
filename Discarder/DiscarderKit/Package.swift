@@ -24,7 +24,8 @@ let package = Package(
             name: "DiscarderKit",
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
             name: "DiscarderCLI",

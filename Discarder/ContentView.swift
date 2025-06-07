@@ -203,9 +203,9 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
                     )
                 )
                 
-                await simulator.setDelegate(self)
+                simulator.setDelegate(self)
                 
-                try await simulator.iterate(count: 1_000_000)
+                try await simulator.run(iterations: 10_000_000)
             }
             catch {
                 if false == error is CancellationError {
@@ -244,7 +244,7 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
         self.startIterating()
     }
     
-    nonisolated func handleUpdate(_ output: DiscarderResult, iteration: Int) {
+    nonisolated func handleUpdate(_ output: DiscarderResult) {
         Task { @MainActor in
             self.result = output
         }
@@ -274,7 +274,7 @@ struct ContentView: View {
             Divider()
             
             ResultView(isLoading: self.model.isLoading, result: self.model.result)
-                .frame(width: 300)
+                .frame(width: 400)
         }
         .padding()
     }
@@ -286,16 +286,9 @@ struct ResultView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                if self.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                }
-                
-                Text("Iteration #\(self.result.iterations)")
-                    .font(.title2)
-                    .monospacedDigit()
-            }
+            Text("Iteration #\(self.result.iterations)")
+                .font(.title2)
+                .monospacedDigit()
             
             if self.result.iterations == 0 {
                 Text("No iterations yet")
@@ -309,6 +302,13 @@ struct ResultView: View {
                         percentage: Double(outs) / Double(self.result.iterations) * 100
                     )
                 }
+            }
+        }
+        .overlay {
+            if self.isLoading {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
         }
         .padding()
@@ -341,7 +341,8 @@ struct ResultCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                    .frame(width: 50, alignment: .leading)
+                    .frame(width: 100, alignment: .leading)
+                    .fixedSize(horizontal: true, vertical: false)
             }
         }
     }

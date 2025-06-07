@@ -5,225 +5,161 @@
 //  Created by Andrii Zinoviev on 07.06.2025.
 //
 
-import Algorithms
-
-public enum PokerHandKind: Comparable, CaseIterable, Sendable {
-    case highCard
-    case onePair
-    case twoPair
-    case threeOfAKind
-    case straight
-    case flush
-    case fullHouse
-    case fourOfAKind
-    case straightFlush
-    case royalFlush
+public final class PokerHandResolver {
+    private let ranks = Rank.allCases
+    private let suits = Suit.allCases
+    private let offset: Int
+    private let rankCount: Int
+    private let suitCount: Int
     
-    fileprivate var resolverType: any PokerHandResolving.Type {
-        switch self {
-        case .highCard: HighCardResolver.self
-        case .onePair: OnePairResolver.self
-        case .twoPair: TwoPairResolver.self
-        case .threeOfAKind: ThreeOfAKindResolver.self
-        case .straight: StraightResolver.self
-        case .flush: FlushResolver.self
-        case .fullHouse: FullHouseResolver.self
-        case .fourOfAKind: FourOfAKindResolver.self
-        case .straightFlush: StraightFlushResolver.self
-        case .royalFlush: RoyalFlushResolver.self
-        }
-    }
-}
-
-extension PokerHandKind: CustomStringConvertible {
-    public var description: String {
-        switch self {
-        case .highCard: return "High Card"
-        case .onePair: return "One Pair"
-        case .twoPair: return "Two Pair"
-        case .threeOfAKind: return "Three of a Kind"
-        case .straight: return "Straight"
-        case .flush: return "Flush"
-        case .fullHouse: return "Full House"
-        case .fourOfAKind: return "Four of a Kind"
-        case .straightFlush: return "Straight Flush"
-        case .royalFlush: return "Royal Flush"
-        }
-    }
-}
-
-protocol PokerHandResolving {
-    init()
-    var count: Int { get }
-    func isPokerHand(_ hand: [Card]) -> Bool
-}
-
-struct PokerHandResolver {
-    func pokerHands(in hand: [Card]) -> Set<PokerHandKind> {
-        if hand.isEmpty {
-            return []
+    // Pre-allocated arrays for reuse
+    private var rankCounts: [Int]
+    private var suitCounts: [Int]
+    private var suitMasks: [UInt16]
+    
+    // Pre-computed straights
+    private let straights: [UInt16]
+    private let wheel: UInt16
+    private let royal: UInt16
+    
+    init() {
+        self.offset = self.ranks.first!.index
+        self.rankCount = self.ranks.count
+        self.suitCount = self.suits.count
+        
+        // Pre-allocate arrays
+        self.rankCounts = [Int](repeating: 0, count: self.rankCount)
+        self.suitCounts = [Int](repeating: 0, count: self.suitCount)
+        self.suitMasks = [UInt16](repeating: 0, count: self.suitCount)
+        
+        // Pre-compute straights
+        let straightBits: UInt16 = 0b11111
+        var tempStraights = [UInt16]()
+        tempStraights.reserveCapacity(self.rankCount - 4)
+        
+        for i in 0...self.rankCount - 5 {
+            tempStraights.append(straightBits << UInt16(i))
         }
         
-        var result: Set<PokerHandKind> = []
+        self.wheel = (1 << UInt16(self.rankCount - 1)) | (straightBits >> 1)
+        tempStraights.append(self.wheel)
+        self.straights = tempStraights
         
-        for kind in PokerHandKind.allCases {
-            let resolverType = kind.resolverType
-            let resolver = resolverType.init()
-            let handCount = resolver.count
-            
-            for subset in hand.combinations(ofCount: handCount) {
-                if resolver.isPokerHand(subset) {
-                    result.insert(kind)
+        self.royal = straightBits << UInt16(self.rankCount - 5)
+    }
+    
+    // Optimized method that updates output directly without Set allocation
+    func updateOuts(for hand: [Card], output: inout DiscarderResult) {
+        // Reset arrays for reuse
+        for i in 0..<self.rankCount {
+            self.rankCounts[i] = 0
+        }
+        for i in 0..<self.suitCount {
+            self.suitCounts[i] = 0
+            self.suitMasks[i] = 0
+        }
+        
+        var mask: UInt16 = 0
+        
+        // Count cards
+        for c in hand {
+            let r = Int(c.rank.index - self.offset)
+            let s = self.suits.firstIndex(of: c.suit)!
+            self.rankCounts[r] += 1
+            self.suitCounts[s] += 1
+            let bit: UInt16 = 1 << UInt16(r)
+            self.suitMasks[s] |= bit
+            mask |= bit
+        }
+        
+        if hand.isEmpty { return }
+        
+        // Always count high card
+        output.outs[.highCard, default: 0] += 1
+        
+        // Check for straight flush and royal flush
+        var hasStraightFlush = false
+        var hasRoyalFlush = false
+        for i in 0..<self.suitCount where self.suitCounts[i] >= 5 {
+            let sm = self.suitMasks[i]
+            for straight in self.straights {
+                if sm & straight == straight {
+                    hasStraightFlush = true
+                    if sm & self.royal == self.royal {
+                        hasRoyalFlush = true
+                    }
+                    break
                 }
             }
+            if hasStraightFlush { break }
         }
         
-        return result
-    }
-}
-
-private struct HighCardResolver: PokerHandResolving {
-    let count = 1
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        return true
-    }
-}
-
-private struct OnePairResolver: PokerHandResolving {
-    let count = 2
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        return hand.allHasSame(\.rank)
-    }
-}
-
-private struct TwoPairResolver: PokerHandResolving {
-    let count = 4
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
+        // Count pairs, trips, and four of a kinds
+        var pairs = 0
+        var trips = 0
+        var fourOfAKinds = 0
         
-        let sortedRanks = hand.map(\.rank).sorted()
-        
-        // Two pair pattern: AABB or AAAA (four of a kind contains two pair)
-        return sortedRanks[0] == sortedRanks[1] &&
-            sortedRanks[2] == sortedRanks[3]
-    }
-}
-
-private struct ThreeOfAKindResolver: PokerHandResolving {
-    let count = 3
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        return hand.allHasSame(\.rank)
-    }
-}
-
-private struct StraightResolver: PokerHandResolving {
-    let count = 5
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        
-        let sortedRanks = hand.map(\.rank).sorted()
-        
-        if sortedRanks == [2, 3, 4, 5, .ace] {
-            return true
-        }
-        
-        // Check for consecutive ranks
-        for i in 1..<sortedRanks.count {
-            if sortedRanks[i].index != sortedRanks[i - 1].index + 1 {
-                return false
+        for count in self.rankCounts {
+            if count >= 4 {
+                fourOfAKinds += 1
+                trips += 1
+                pairs += 1
+            }
+            else if count >= 3 {
+                trips += 1
+                pairs += 1
+            }
+            else if count >= 2 {
+                pairs += 1
             }
         }
         
-        return true
-    }
-}
-
-private struct FlushResolver: PokerHandResolving {
-    let count = 5
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        return hand.allHasSame(\.suit)
-    }
-}
-
-private struct FullHouseResolver: PokerHandResolving {
-    let count = 5
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        
-        let sortedRanks = hand.map(\.rank).sorted()
-        
-        // Full house patterns: AAABB or AABBB
-        return (sortedRanks[0] == sortedRanks[1] && sortedRanks[1] == sortedRanks[2] && sortedRanks[3] == sortedRanks[4]) ||
-            (sortedRanks[0] == sortedRanks[1] && sortedRanks[2] == sortedRanks[3] && sortedRanks[3] == sortedRanks[4])
-    }
-}
-
-private struct FourOfAKindResolver: PokerHandResolving {
-    let count = 4
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        return hand.allHasSame(\.rank)
-    }
-}
-
-private struct StraightFlushResolver: PokerHandResolving {
-    let count = 5
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        
-        // Must be both a straight and a flush
-        let straightResolver = StraightResolver()
-        let flushResolver = FlushResolver()
-        
-        return straightResolver.isPokerHand(hand) && flushResolver.isPokerHand(hand)
-    }
-}
-
-private struct RoyalFlushResolver: PokerHandResolving {
-    let count = 5
-    
-    func isPokerHand(_ hand: [Card]) -> Bool {
-        precondition(hand.count == self.count)
-        
-        // Must be a straight flush to A
-        guard StraightFlushResolver().isPokerHand(hand) else {
-            return false
-        }
-        
-        return Set(hand.map(\.rank)) == [.ace, .king, .queen, .jack, 10]
-    }
-}
-
-extension Sequence {
-    func allHasSame<T: Equatable>(_ value: (Element) -> T) -> Bool {
-        var sameValue: T?
-        
-        for element in self {
-            let currentValue = value(element)
-            
-            if let sameValue {
-                if sameValue != currentValue {
-                    return false
-                }
-            }
-            else {
-                sameValue = currentValue
+        // Check for flush
+        var hasFlush = false
+        for count in self.suitCounts {
+            if count >= 5 {
+                hasFlush = true
+                break
             }
         }
         
-        return true
+        // Check for straight
+        var hasStraight = false
+        for straight in self.straights {
+            if mask & straight == straight {
+                hasStraight = true
+                break
+            }
+        }
+        
+        // Update output directly based on detected hands
+        if hasRoyalFlush {
+            output.outs[.royalFlush, default: 0] += 1
+        }
+        if hasStraightFlush {
+            output.outs[.straightFlush, default: 0] += 1
+        }
+        if fourOfAKinds >= 1 {
+            output.outs[.fourOfAKind, default: 0] += 1
+            output.outs[.twoPair, default: 0] += 1
+        }
+        if (trips >= 1 && pairs >= 2) || trips >= 2 {
+            output.outs[.fullHouse, default: 0] += 1
+        }
+        if hasFlush {
+            output.outs[.flush, default: 0] += 1
+        }
+        if hasStraight {
+            output.outs[.straight, default: 0] += 1
+        }
+        if trips >= 1 {
+            output.outs[.threeOfAKind, default: 0] += 1
+        }
+        if pairs >= 2 {
+            output.outs[.twoPair, default: 0] += 1
+        }
+        if pairs >= 1 {
+            output.outs[.onePair, default: 0] += 1
+        }
     }
 }

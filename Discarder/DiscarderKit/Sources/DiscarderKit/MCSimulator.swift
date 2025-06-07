@@ -6,32 +6,41 @@
 //
 
 import Combine
+import Foundation
 
 public protocol MonteCarloAlgorithm {
-    associatedtype Output
+    associatedtype Output: Sendable
+    associatedtype Context: AnyObject
     
     static var initialOutput: Output { get }
     
-    func performIteration(
-        random: inout some RandomNumberGenerator,
-        output: inout Output,
-        iterations: Int
-    )
-}
-
-public protocol MCSimulatorDelegate<Output>: AnyObject {
-    associatedtype Output
+    func makeContext() -> Context
     
-    func handleUpdate(_ output: Output, iteration: Int)
+    func performIteration(
+        context: Context,
+        random: inout some RandomNumberGenerator,
+        output: inout Output
+    )
+    
+    func combine(output: Output, into other: inout Output)
 }
 
-public actor MCSimulator<Algorithm: MonteCarloAlgorithm> {
+@MainActor
+public protocol MCSimulatorDelegate<Output>: AnyObject {
+    associatedtype Output: Sendable
+    
+    func handleUpdate(_ output: Output)
+}
+
+@MainActor
+public final class MCSimulator<Algorithm: MonteCarloAlgorithm> {
+    private let threadCount = ProcessInfo.processInfo.activeProcessorCount
+    
     private var random: RandomNumberGenerator
     
     private weak var delegate: (any MCSimulatorDelegate<Algorithm.Output>)?
     
     private let algorithm: Algorithm
-    private var iterations: Int = 0
     
     private var output: Algorithm.Output
     
@@ -48,33 +57,99 @@ public actor MCSimulator<Algorithm: MonteCarloAlgorithm> {
         self.delegate = delegate
     }
     
-    public func iterate(count: Int) async throws {
-        for _ in 0..<count {
-            try Task.checkCancellation()
-            self.performIteration()
-        }
-    }
+    private let clock = ContinuousClock()
     
-    private func performIteration() {
-        self.algorithm.performIteration(
-            random: &self.random,
-            output: &self.output,
-            iterations: self.iterations + 1
-        )
-            
-        self.iterationCompeted()
-    }
-    
-    private func iterationCompeted() {
-        self.iterations += 1
+    public func run(iterations: Int) async throws {
+        let startTime = self.clock.now
         
-        if self.iterations.isMultiple(of: 100) {
-            self.delegate?.handleUpdate(self.output, iteration: self.iterations)
+        let queue = OperationQueue()
+        
+        queue.maxConcurrentOperationCount = self.threadCount
+        
+        try await withTaskCancellationHandler(
+            operation: {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    self.run(on: queue, iterations: iterations) {
+                        let endTime = self.clock.now
+                        print(endTime - startTime)
+                        
+                        if Task.isCancelled {
+                            continuation.resume(throwing: CancellationError())
+                        }
+                        else {
+                            continuation.resume()
+                        }
+                    }
+                }
+            },
+            onCancel: {
+                queue.cancelAllOperations()
+            }
+        )
+    }
+    
+    private func run(
+        on queue: OperationQueue,
+        iterations: Int,
+        completionHandler: @escaping () -> Void
+    ) {
+        let threadIterations = self.splitIterations(n: iterations, k: self.threadCount)
+        
+        var completedThreads: Set<Int> = []
+        
+        for (index, threadIterationCount) in threadIterations.enumerated() {
+            print("Thread #\(index): \(threadIterationCount)")
+            
+            let operation = MCOperation(
+                algorithm: self.algorithm,
+                seed: UInt64.random(in: 0..<UInt64.max, using: &self.random),
+                iterations: threadIterationCount,
+                batchSize: 10_000
+            )
+            
+            operation.batchHandler = { [weak self] batchOutput in
+                guard let self else { return }
+                
+                self.algorithm.combine(output: batchOutput, into: &self.output)
+                self.delegate?.handleUpdate(self.output)
+            }
+            
+            operation.completionHandler = {
+                print("Thread #\(index): DONE")
+                completedThreads.insert(index)
+                
+                if completedThreads.count == threadIterations.count {
+                    completionHandler()
+                }
+            }
+            
+            queue.addOperation(operation)
         }
+    }
+    
+    private func splitIterations(n: Int, k: Int) -> [Int] {
+        let base = n / k
+        let remainder = n % k
+        var result: [Int] = []
+        var current = 0
+
+        for i in 0..<k {
+            let count = base + (i < remainder ? 1 : 0)
+            result.append(count)
+            current += count
+        }
+
+        return result
     }
 }
 
-private struct SplitMix64: RandomNumberGenerator {
+final class TestOperation: Operation {
+    override func main() {
+        print("I'm here!")
+    }
+}
+
+struct SplitMix64: RandomNumberGenerator {
     private var state: UInt64
 
     init(seed: UInt64) {
