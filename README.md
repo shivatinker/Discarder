@@ -1,6 +1,6 @@
 ## Discarder
 
-Check your Balatro discard odds. Built for fun, optimized for millions of iterations per second.
+Check your Balatro discard odds. Built for fun, optimized for **28 million** iterations per second.
 
 Uses super simple multithreaded Monte-Carlo simulation on all of your cores. Optimized to minimize allocations. Core logic is written in Rust and bridged to Swift using C.
 
