@@ -1,0 +1,22 @@
+[package]
+name = "rust_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+strum = { version = "0.25", features = ["derive"] }
+rand = "0.8"
+rand_pcg = "0.3"
+itertools = "0.12"
+
+[build-dependencies]
+cbindgen = "0.24"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[profile.release]
+panic = 'abort'
+
+[profile.dev]
+panic = 'abort'

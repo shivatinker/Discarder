@@ -5,8 +5,8 @@
 //  Created by Andrii Zinoviev on 07.06.2025.
 //
 
-public enum Suit: Sendable, Hashable, CustomStringConvertible, CaseIterable, Comparable {
-    case spades
+public enum Suit: Int, Sendable, Hashable, CustomStringConvertible, CaseIterable {
+    case spades = 0
     case hearts
     case diamonds
     case clubs
@@ -110,7 +110,7 @@ public struct Card: Hashable, CustomStringConvertible, Sendable, Comparable {
             return lhs.rank < rhs.rank
         }
         
-        return lhs.suit < rhs.suit
+        return lhs.suit.rawValue < rhs.suit.rawValue
     }
 }
 

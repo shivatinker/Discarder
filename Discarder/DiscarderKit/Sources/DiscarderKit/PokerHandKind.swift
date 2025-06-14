@@ -5,8 +5,8 @@
 //  Created by Andrii Zinoviev on 08.06.2025.
 //
 
-public enum PokerHandKind: Comparable, CaseIterable, Sendable {
-    case highCard
+public enum PokerHandKind: Int, CaseIterable, Sendable {
+    case highCard = 0
     case onePair
     case twoPair
     case threeOfAKind

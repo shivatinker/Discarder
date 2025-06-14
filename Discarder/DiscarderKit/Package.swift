@@ -18,7 +18,14 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "DiscarderKit",
+            dependencies: [
+                .target(name: "RustCore"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .binaryTarget(
+            name: "RustCore",
+            path: "Sources/RustCore/RustCore.xcframework"
         ),
         .testTarget(
             name: "DiscarderKitTests",

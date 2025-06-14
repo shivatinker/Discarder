@@ -163,7 +163,7 @@ struct HandCard {
 }
 
 @MainActor
-final class MainViewModel: ObservableObject, MCSimulatorDelegate {
+final class MainViewModel: ObservableObject {
     @Published
     private(set) var result = DiscarderResult()
     
@@ -178,6 +178,10 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
     
     @Published
     private(set) var isLoading = false
+    
+    init() {
+        self.startIterating()
+    }
     
     private var task: Task<Void, Never>?
     
@@ -194,18 +198,17 @@ final class MainViewModel: ObservableObject, MCSimulatorDelegate {
                 
                 let remainingHand = self.hand.filter { false == $0.isDiscarded }.map(\.card)
                 
-                let simulator = MCSimulator(
-                    seed: UInt64.random(in: 0..<UInt64.max),
-                    algorithm: DiscarderAlgorithm(
-                        hand: remainingHand,
-                        deck: self.deck,
-                        drawCount: self.handSize - remainingHand.count
-                    )
+                let discarder = Discarder(
+                    deck: self.deck,
+                    handSize: self.handSize,
+                    seed: 42
                 )
                 
-                simulator.setDelegate(self)
-                
-                try await simulator.run(iterations: 1_000_000)
+                try await discarder.run(hand: remainingHand, maxIterations: 1_000_000) { result in
+                    DispatchQueue.main.async {
+                        self.result = result
+                    }
+                }
             }
             catch {
                 if false == error is CancellationError {
@@ -295,7 +298,7 @@ struct ResultView: View {
                     .foregroundStyle(.secondary)
             }
             else {
-                ForEach(self.result.outs.sorted(by: { $0.value > $1.value }), id: \.key) { hand, outs in
+                ForEach(self.result.allOuts, id: \.0) { hand, outs in
                     ResultCard(
                         hand: hand,
                         outs: outs,
@@ -319,7 +322,7 @@ struct ResultView: View {
 
 struct ResultCard: View {
     let hand: PokerHandKind
-    let outs: Int
+    let outs: Int64
     let percentage: Double
     
     var body: some View {
@@ -355,7 +358,7 @@ struct ResultCard: View {
     .frame(height: 400)
 }
 
-#Preview {
-    ResultView(isLoading: true, result: .test)
-        .frame(width: 300)
-}
+// #Preview {
+//    ResultView(isLoading: true, result: .test)
+//        .frame(width: 300)
+// }
