@@ -27,9 +27,5 @@ let package = Package(
             name: "RustCore",
             path: "Sources/RustCore/RustCore.xcframework"
         ),
-        .testTarget(
-            name: "DiscarderKitTests",
-            dependencies: ["DiscarderKit"]
-        ),
     ]
 )

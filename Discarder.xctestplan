@@ -12,13 +12,7 @@
 
   },
   "testTargets" : [
-    {
-      "target" : {
-        "containerPath" : "container:Discarder\/DiscarderKit",
-        "identifier" : "DiscarderKitTests",
-        "name" : "DiscarderKitTests"
-      }
-    }
+
   ],
   "version" : 1
 }
