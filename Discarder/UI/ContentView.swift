@@ -49,8 +49,12 @@ struct ContentView: View {
             
             Divider()
             
-            ResultView(isLoading: self.model.isLoading, result: self.model.result)
-                .frame(width: 400)
+            ResultView(
+                isLoading: self.model.isLoading,
+                lastTime: self.model.lastTime,
+                result: self.model.result
+            )
+            .frame(width: 400)
         }
         .padding()
         .fixedSize(horizontal: false, vertical: true)
@@ -59,6 +63,7 @@ struct ContentView: View {
 
 struct ResultView: View {
     let isLoading: Bool
+    let lastTime: String
     let result: DiscarderResult
     
     var body: some View {
@@ -79,6 +84,14 @@ struct ResultView: View {
                         percentage: Double(outs) / Double(self.result.iterations) * 100
                     )
                 }
+            }
+            
+            Spacer()
+            
+            if false == self.isLoading {
+                Text(self.lastTime)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
         }
         .overlay {

@@ -61,8 +61,6 @@ public final class Discarder: @unchecked Sendable {
                     )
                 }
                 
-                print(iterations)
-                
                 resultHandler(
                     DiscarderResult(
                         iterations: iterations,

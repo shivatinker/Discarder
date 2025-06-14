@@ -42,6 +42,8 @@ final class MainViewModel: ObservableObject {
     
     @Published private(set) var discardedCards: Set<UUID> = []
     
+    @Published private(set) var lastTime = ""
+    
     init() {
         self.updateResult()
     }
@@ -110,6 +112,9 @@ final class MainViewModel: ObservableObject {
     
     private func updateResult() {
         Task {
+            let clock = ContinuousClock()
+            let start = clock.now
+            
             let discarder = Discarder(deck: self.deck, handSize: self.handSize, seed: 42)
             
             let hand = self.hand.elements
@@ -121,7 +126,10 @@ final class MainViewModel: ObservableObject {
                 maxIterations: 1_000_000
             ) { result in
                 DispatchQueue.main.async {
+                    let end = clock.now
+                    
                     self.result = result
+                    self.lastTime = "\(end - start)"
                 }
             }
         }
