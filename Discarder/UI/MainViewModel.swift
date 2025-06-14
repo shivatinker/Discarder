@@ -13,9 +13,33 @@ import SwiftUI
 final class MainViewModel: ObservableObject {
     @Published private(set) var result = DiscarderResult()
     @Published private(set) var deck = Deck.makeStandard()
-    @Published private(set) var handSize = 8
+    
+    @Published
+    private var handSizeStorage = 8 {
+        didSet {
+            self.updateResult()
+        }
+    }
+    
+    var handSize: Int {
+        get { self.handSizeStorage }
+        set { self.handSizeStorage = max(max(1, newValue), self.hand.count) }
+    }
+    
     @Published private(set) var isLoading = false
-    @Published private(set) var hand: IdentifiedArrayOf<DeckCard> = []
+    
+    @Published
+    private var handStorage: IdentifiedArrayOf<DeckCard> = []
+    
+    private(set) var hand: IdentifiedArrayOf<DeckCard> {
+        get {
+            self.handStorage
+        }
+        set {
+            self.handStorage = .init(uniqueElements: newValue.sorted(using: KeyPathComparator(\.card)))
+        }
+    }
+    
     @Published private(set) var discardedCards: Set<UUID> = []
     
     init() {

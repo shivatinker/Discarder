@@ -69,7 +69,7 @@ public struct Rank: Sendable, Hashable, CustomStringConvertible, Comparable, Exp
     }
 
     public static func < (lhs: Rank, rhs: Rank) -> Bool {
-        lhs.index < rhs.index
+        lhs.index > rhs.index
     }
     
     public static let ten = Rank(index: 10)

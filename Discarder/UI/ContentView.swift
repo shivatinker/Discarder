@@ -23,6 +23,10 @@ struct ContentView: View {
                     Button("Reset") {
                         self.model.reset()
                     }
+                    
+                    Spacer()
+                    
+                    HandSizePicker(handSize: self.$model.handSize)
                 }
                 
                 AllCardsView(action: self.model.addCardToDeck)

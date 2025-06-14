@@ -36,7 +36,7 @@ struct AllCardsView: View {
     private func cards(for suit: Suit) -> [Card] {
         Card.allCards
             .filter { $0.suit == suit }
-            .sorted(using: KeyPathComparator(\.rank, order: .reverse))
+            .sorted(using: KeyPathComparator(\.rank))
     }
 }
 

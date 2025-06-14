@@ -17,7 +17,7 @@ struct DeckView: View {
     private func cards(for suit: Suit) -> [DeckCard] {
         self.deck.cards
             .filter { $0.card.suit == suit }
-            .sorted(using: KeyPathComparator(\.card.rank, order: .reverse))
+            .sorted(using: KeyPathComparator(\.card.rank))
     }
     
     var body: some View {
