@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		DA84D7952DF484100063FBC2 /* DiscarderKit in Frameworks */ = {isa = PBXBuildFile; productRef = DA84D7942DF484100063FBC2 /* DiscarderKit */; };
+		DAA16BEF2DFDDCD1007EA2C3 /* IdentifiedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = DAA16BEE2DFDDCD1007EA2C3 /* IdentifiedCollections */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +43,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DA84D7952DF484100063FBC2 /* DiscarderKit in Frameworks */,
+				DAA16BEF2DFDDCD1007EA2C3 /* IdentifiedCollections in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +96,7 @@
 			name = Discarder;
 			packageProductDependencies = (
 				DA84D7942DF484100063FBC2 /* DiscarderKit */,
+				DAA16BEE2DFDDCD1007EA2C3 /* IdentifiedCollections */,
 			);
 			productName = Discarder;
 			productReference = DA84D77E2DF483DD0063FBC2 /* Discarder.app */;
@@ -123,6 +126,9 @@
 			);
 			mainGroup = DA84D7752DF483DD0063FBC2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DAA16BED2DFDDCD1007EA2C3 /* XCRemoteSwiftPackageReference "swift-identified-collections" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DA84D77F2DF483DD0063FBC2 /* Products */;
 			projectDirPath = "";
@@ -158,6 +164,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -221,6 +228,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -349,10 +357,26 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		DAA16BED2DFDDCD1007EA2C3 /* XCRemoteSwiftPackageReference "swift-identified-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-identified-collections";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		DA84D7942DF484100063FBC2 /* DiscarderKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DiscarderKit;
+		};
+		DAA16BEE2DFDDCD1007EA2C3 /* IdentifiedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DAA16BED2DFDDCD1007EA2C3 /* XCRemoteSwiftPackageReference "swift-identified-collections" */;
+			productName = IdentifiedCollections;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

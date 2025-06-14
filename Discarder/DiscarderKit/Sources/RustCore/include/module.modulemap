@@ -1,0 +1,5 @@
+module RustCore [system] {
+  header "rust_core.h"
+  link "librust_core"
+  export *
+}
