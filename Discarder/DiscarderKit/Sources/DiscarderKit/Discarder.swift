@@ -8,7 +8,7 @@
 internal import RustCore
 import Foundation
 
-public final class Discarder {
+public final class Discarder: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.shivatinker.discarder.worker", qos: .default)
     private let instance: OpaquePointer
     
@@ -123,6 +123,6 @@ extension Card {
 
 extension Deck {
     fileprivate func makeCCardArray() -> [CCard] {
-        self.cards.map { $0.makeCCard() }
+        self.cards.map { $0.card.makeCCard() }
     }
 }

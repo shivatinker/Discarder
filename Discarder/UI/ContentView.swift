@@ -8,252 +8,6 @@
 import DiscarderKit
 import SwiftUI
 
-private struct CardImage: View {
-    enum Kind {
-        case card(Card)
-        case placeholder
-    }
-    
-    let kind: Kind
-    
-    init(_ kind: Kind) {
-        self.kind = kind
-    }
-    
-    var body: some View {
-        Image(self.imageName)
-            .interpolation(.none)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 42)
-            .opacity(self.opacity)
-    }
-    
-    private var opacity: Double {
-        switch self.kind {
-        case .placeholder:
-            0.4
-            
-        case .card:
-            1
-        }
-    }
-    
-    private var imageName: String {
-        switch self.kind {
-        case let .card(card):
-            self.cardImageName(card)
-            
-        case .placeholder:
-            "card_empty"
-        }
-    }
-    
-    private func cardImageName(_ card: Card) -> String {
-        "card_\(self.imageSuitName(card.suit))_\(self.imageRankName(card.rank))"
-    }
-    
-    private func imageSuitName(_ suit: Suit) -> String {
-        switch suit {
-        case .spades: "spades"
-        case .hearts: "hearts"
-        case .diamonds: "diamonds"
-        case .clubs: "clubs"
-        }
-    }
-    
-    private func imageRankName(_ rank: Rank) -> String {
-        if rank.index < 10 {
-            "0\(rank.index)"
-        }
-        else if rank.index == 10 {
-            "10"
-        }
-        else {
-            rank.description
-        }
-    }
-}
-
-struct CardView: View {
-    @State
-    private var isHovered: Bool = false
-    
-    let card: Card
-    
-    var body: some View {
-        CardImage(.card(self.card))
-            .overlay {
-                if self.isHovered {
-                    Rectangle()
-                        .fill(Color.blue.opacity(0.1))
-                }
-            }
-            .onHover { self.isHovered = $0 }
-    }
-}
-
-struct DeckView: View {
-    let deck: Deck
-    let action: (Card) -> Void
-    
-    var body: some View {
-        LazyVGrid(
-            columns: Array(
-                repeating: GridItem(
-                    .fixed(42),
-                    spacing: 2
-                ),
-                count: 13
-            ),
-            spacing: 2
-        ) {
-            ForEach(self.deck.cards.sorted(), id: \.self) { card in
-                CardView(card: card)
-                    .onTapGesture {
-                        self.action(card)
-                    }
-            }
-        }
-    }
-}
-
-struct HandView: View {
-    let hand: [HandCard]
-    let maxCount: Int
-    let action: (Card) -> Void
-    let removeAction: (Card) -> Void
-    
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(
-                self.hand.sorted(using: KeyPathComparator(\.card.rank, order: .reverse)),
-                id: \.card
-            ) { card in
-                VStack(spacing: 2) {
-                    CardView(card: card.card)
-                        .overlay {
-                            if card.isDiscarded {
-                                Rectangle()
-                                    .fill(.red.opacity(0.3))
-                            }
-                        }
-                        .onTapGesture {
-                            self.action(card.card)
-                        }
-                    
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.red)
-                        .onTapGesture {
-                            self.removeAction(card.card)
-                        }
-                }
-            }
-            
-            ForEach(0..<(self.maxCount - self.hand.count), id: \.self) { index in
-                CardImage(.placeholder)
-            }
-        }
-    }
-}
-
-struct HandCard {
-    var card: Card
-    var isDiscarded: Bool
-}
-
-@MainActor
-final class MainViewModel: ObservableObject {
-    @Published
-    private(set) var result = DiscarderResult()
-    
-    @Published
-    private(set) var deck = Deck.makeStandard()
-    
-    @Published
-    private(set) var hand: [HandCard] = []
-    
-    @Published
-    private(set) var handSize = 8
-    
-    @Published
-    private(set) var isLoading = false
-    
-    init() {
-        self.startIterating()
-    }
-    
-    private var task: Task<Void, Never>?
-    
-    private func startIterating() {
-        let oldTask = self.task
-        oldTask?.cancel()
-        
-        self.task = Task {
-            do {
-                await oldTask?.value
-                
-                self.isLoading = true
-                defer { self.isLoading = false }
-                
-                let remainingHand = self.hand.filter { false == $0.isDiscarded }.map(\.card)
-                
-                let discarder = Discarder(
-                    deck: self.deck,
-                    handSize: self.handSize,
-                    seed: 42
-                )
-                
-                try await discarder.run(hand: remainingHand, maxIterations: 1_000_000) { result in
-                    DispatchQueue.main.async {
-                        self.result = result
-                    }
-                }
-            }
-            catch {
-                if false == error is CancellationError {
-                    print(error)
-                }
-            }
-        }
-    }
-    
-    func handleDeckAction(_ card: Card) {
-        if self.hand.count < self.handSize {
-            self.hand.append(HandCard(card: card, isDiscarded: false))
-            self.deck.cards.removeAll { $0 == card }
-            self.startIterating()
-        }
-    }
-    
-    func handleHandAction(_ card: Card) {
-        for (index, handCard) in self.hand.enumerated() {
-            if handCard.card == card {
-                self.hand[index].isDiscarded.toggle()
-            }
-        }
-        
-        self.startIterating()
-    }
-    
-    func handleHandRemoveAction(_ card: Card) {
-        for (index, handCard) in self.hand.enumerated() {
-            if handCard.card == card {
-                self.hand.remove(at: index)
-                self.deck.cards.append(card)
-            }
-        }
-        
-        self.startIterating()
-    }
-    
-    nonisolated func handleUpdate(_ output: DiscarderResult) {
-        Task { @MainActor in
-            self.result = output
-        }
-    }
-}
-
 struct ContentView: View {
     @ObservedObject
     var model: MainViewModel
@@ -261,18 +15,33 @@ struct ContentView: View {
     var body: some View {
         HStack {
             VStack {
-                DeckView(deck: self.model.deck) { card in
-                    self.model.handleDeckAction(card)
+                HStack {
+                    Button("Clear deck") {
+                        self.model.clearDeck()
+                    }
+                    
+                    Button("Reset") {
+                        self.model.reset()
+                    }
                 }
                 
+                AllCardsView(action: self.model.addCardToDeck)
+             
+                DeckView(
+                    deck: self.model.deck,
+                    action: self.model.addCardToHand,
+                    removeAction: self.model.removeCardFromDeck
+                )
+                
                 HandView(
-                    hand: self.model.hand,
-                    maxCount: self.model.handSize,
-                    action: self.model.handleHandAction,
-                    removeAction: self.model.handleHandRemoveAction
+                    maxSize: self.model.handSize,
+                    cards: self.model.hand,
+                    discardedCards: self.model.discardedCards,
+                    discardHandler: self.model.toggleDiscardCard,
+                    removeHandler: self.model.removeCardFromHand
                 )
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: 700)
             
             Divider()
             
@@ -280,6 +49,7 @@ struct ContentView: View {
                 .frame(width: 400)
         }
         .padding()
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -355,7 +125,7 @@ struct ResultCard: View {
     ContentView(
         model: MainViewModel()
     )
-    .frame(height: 400)
+    .fixedSize()
 }
 
 // #Preview {

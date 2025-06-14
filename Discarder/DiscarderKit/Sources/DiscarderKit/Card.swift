@@ -8,8 +8,8 @@
 public enum Suit: Int, Sendable, Hashable, CustomStringConvertible, CaseIterable {
     case spades = 0
     case hearts
-    case diamonds
     case clubs
+    case diamonds
     
     init?(string: String) {
         switch string {
@@ -42,6 +42,7 @@ public enum Suit: Int, Sendable, Hashable, CustomStringConvertible, CaseIterable
 
 public struct Rank: Sendable, Hashable, CustomStringConvertible, Comparable, ExpressibleByIntegerLiteral, CaseIterable {
     private static let namedRanks: [Rank: String] = [
+        .ten: "T",
         .jack: "J",
         .queen: "Q",
         .king: "K",
@@ -71,6 +72,7 @@ public struct Rank: Sendable, Hashable, CustomStringConvertible, Comparable, Exp
         lhs.index < rhs.index
     }
     
+    public static let ten = Rank(index: 10)
     public static let jack = Rank(index: 11)
     public static let queen = Rank(index: 12)
     public static let king = Rank(index: 13)
@@ -111,6 +113,12 @@ public struct Card: Hashable, CustomStringConvertible, Sendable, Comparable {
         }
         
         return lhs.suit.rawValue < rhs.suit.rawValue
+    }
+    
+    public static let allCards: [Card] = Suit.allCases.flatMap { suit in
+        Rank.allCases.reversed().map { rank in
+            Card(rank: rank, suit: suit)
+        }
     }
 }
 
